@@ -1,0 +1,45 @@
+<!doctype html>
+<html lang="fr">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>{{ title }}</title>
+    <style>
+      :root { color-scheme: light dark; }
+      body {
+        font-family: system-ui, -apple-system, Segoe UI, Roboto, Ubuntu, Cantarell, Noto Sans, Arial, sans-serif;
+        margin: 2rem auto;
+        max-width: 920px;
+        padding: 0 1rem;
+        line-height: 1.6;
+      }
+      h1, h2, h3 { line-height: 1.25; }
+      header { margin-bottom: 2rem; border-bottom: 1px solid #ccc; padding-bottom: 1rem; }
+      .meta { color: #666; font-size: 0.95rem; }
+      section { margin: 2rem 0; }
+    </style>
+  </head>
+  <body>
+    <header>
+      <h1>{{ title }}</h1>
+      <div class="meta">
+        <div>Auteur: {{ author }}</div>
+        <div>Date: {{ date }}</div>
+      </div>
+    </header>
+
+    {% if sections %}
+      {% for section in sections %}
+        <section>
+          <h2>{{ section.heading }}</h2>
+          <p>{{ section.content }}</p>
+        </section>
+      {% endfor %}
+    {% else %}
+      <p>Contenu vide. Ajoutez des sections dans les variables du template.</p>
+    {% endif %}
+
+  </body>
+  </html>
+
+
