@@ -78,8 +78,15 @@ def convert_ipynb_to_html(nb_path: Path, execute: bool) -> str:
 
     node = nbformat.read(str(nb_path), as_version=4)
     if execute:
-        ep = ExecutePreprocessor(timeout=300, kernel_name="python3")
-        ep.preprocess(node, {"metadata": {"path": str(nb_path.parent)}})
+        try:
+            kernel_name = (
+                getattr(getattr(node, "metadata", {}), "get", lambda *_: None)("kernelspec", {}) or {}
+            ).get("name") or "python3"
+            ep = ExecutePreprocessor(timeout=300, kernel_name=kernel_name)
+            ep.preprocess(node, {"metadata": {"path": str(nb_path.parent)}})
+        except Exception:
+            # Fallback: render without executing if kernel is unavailable
+            pass
     exporter = HTMLExporter()
     exporter.exclude_output_prompt = True
     exporter.exclude_input_prompt = True
@@ -118,8 +125,14 @@ def fetch_and_convert_from_github(owner: str, repo: str, branch: str, path: str,
     try:
         node = nbformat.reads(r.text, as_version=4)
         if execute:
-            ep = ExecutePreprocessor(timeout=300, kernel_name="python3")
-            ep.preprocess(node, {"metadata": {"path": "."}})
+            try:
+                kernel_name = (
+                    getattr(getattr(node, "metadata", {}), "get", lambda *_: None)("kernelspec", {}) or {}
+                ).get("name") or "python3"
+                ep = ExecutePreprocessor(timeout=300, kernel_name=kernel_name)
+                ep.preprocess(node, {"metadata": {"path": "."}})
+            except Exception:
+                pass
         exporter = HTMLExporter()
         exporter.exclude_output_prompt = True
         exporter.exclude_input_prompt = True
