@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import json
 from pathlib import Path
-from typing import List, Tuple
+from typing import List, Tuple, Dict
 
 import streamlit as st
 import requests
@@ -94,7 +94,7 @@ def convert_ipynb_to_html(nb_path: Path, execute: bool) -> str:
 
 def list_ipynb_from_github(owner: str, repo: str, branch: str, directory: str) -> Tuple[bool, List[str]]:
     url = f"https://api.github.com/repos/{owner}/{repo}/contents/{directory}?ref={branch}"
-    resp = requests.get(url, timeout=20)
+    resp = requests.get(url, headers=_github_headers(), timeout=20)
     if resp.status_code != 200:
         return False, f"GitHub API error {resp.status_code}: {resp.text[:200]}"
     items = resp.json()
@@ -103,7 +103,7 @@ def list_ipynb_from_github(owner: str, repo: str, branch: str, directory: str) -
     dirs = [item["path"] for item in items if item.get("type") == "dir"]
     for d in dirs:
         sub_url = f"https://api.github.com/repos/{owner}/{repo}/contents/{d}?ref={branch}"
-        sub_resp = requests.get(sub_url, timeout=20)
+        sub_resp = requests.get(sub_url, headers=_github_headers(), timeout=20)
         if sub_resp.status_code == 200:
             sub_items = sub_resp.json()
             files.extend([it["path"] for it in sub_items if it.get("type") == "file" and it.get("name", "").endswith(".ipynb")])
@@ -117,7 +117,7 @@ def fetch_and_convert_from_github(owner: str, repo: str, branch: str, path: str,
     from nbconvert.preprocessors import ExecutePreprocessor
 
     raw_url = f"https://raw.githubusercontent.com/{owner}/{repo}/{branch}/{path}"
-    r = requests.get(raw_url, timeout=30)
+    r = requests.get(raw_url, headers=_github_headers(raw=True), timeout=30)
     if r.status_code != 200:
         return False, f"Téléchargement échoué ({r.status_code}).", path
     try:
@@ -132,6 +132,26 @@ def fetch_and_convert_from_github(owner: str, repo: str, branch: str, path: str,
         return True, body, path
     except Exception as e:  # noqa: BLE001
         return False, f"Erreur conversion: {e}", path
+
+
+def _github_headers(raw: bool = False) -> Dict[str, str]:
+    """Return headers for GitHub requests, using token from Streamlit secrets if available.
+
+    Set a token in Streamlit Cloud under Secrets as:
+      GITHUB_TOKEN = "ghp_xxx"  (fine-grained read-only is recommended)
+    """
+    headers: Dict[str, str] = {}
+    token = None
+    try:
+        token = st.secrets.get("GITHUB_TOKEN")  # type: ignore[attr-defined]
+    except Exception:
+        token = None
+    if token:
+        headers["Authorization"] = f"Bearer {token}"
+    if not raw:
+        headers["Accept"] = "application/vnd.github+json"
+        headers["X-GitHub-Api-Version"] = "2022-11-28"
+    return headers
 
 
 if __name__ == "__main__":
