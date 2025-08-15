@@ -1,0 +1,47 @@
+<!doctype html>
+<html lang="fr">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Facture {{ invoice.number }}</title>
+    <style>
+      body { font-family: system-ui, -apple-system, Segoe UI, Roboto, Ubuntu, Arial, sans-serif; margin: 2rem auto; max-width: 920px; padding: 0 1rem; line-height: 1.6; }
+      h1, h2 { line-height: 1.25; }
+      table { width: 100%; border-collapse: collapse; }
+      th, td { border-bottom: 1px solid #ddd; padding: 0.5rem; text-align: left; }
+      tfoot td { font-weight: bold; }
+      .meta { color: #666; }
+    </style>
+  </head>
+  <body>
+    <h1>Facture {{ invoice.number }}</h1>
+    <div class="meta">Date: {{ invoice.date }} | Échéance: {{ invoice.due_date }}</div>
+    <h2>Client</h2>
+    <div>{{ client.name }} — {{ client.address }}</div>
+    <div>{{ client.email }} | {{ client.phone }}</div>
+
+    <h2>Détails</h2>
+    <table>
+      <thead>
+        <tr><th>Description</th><th>Qté</th><th>PU</th><th>Total</th></tr>
+      </thead>
+      <tbody>
+        {% for item in items %}
+        <tr>
+          <td>{{ item.description }}</td>
+          <td>{{ item.quantity }}</td>
+          <td>{{ item.unit_price }}</td>
+          <td>{{ item.quantity * item.unit_price }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+      <tfoot>
+        <tr><td colspan="3">Sous-total</td><td>{{ totals.subtotal }}</td></tr>
+        <tr><td colspan="3">TVA</td><td>{{ totals.vat }}</td></tr>
+        <tr><td colspan="3">Total</td><td>{{ totals.total }}</td></tr>
+      </tfoot>
+    </table>
+  </body>
+  </html>
+
+

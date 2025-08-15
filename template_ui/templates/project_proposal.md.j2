@@ -1,0 +1,32 @@
+# Proposition de projet — {{ project_name }}
+
+- **Client**: {{ client_name }}
+- **Date**: {{ date }}
+- **Contact**: {{ contact_email }}
+
+## Contexte
+{{ background }}
+
+## Objectifs
+{% for obj in objectives %}
+- {{ obj }}
+{% endfor %}
+
+## Périmètre
+{{ scope }}
+
+## Livrables
+{% for d in deliverables %}
+- {{ d }}
+{% endfor %}
+
+## Planification
+- **Début**: {{ timeline.start }}
+- **Fin**: {{ timeline.end }}
+- **Jalons**:
+{% for m in timeline.milestones %}
+  - {{ m.date }} — {{ m.title }}
+{% endfor %}
+
+## Budget (estimation)
+{{ budget }}

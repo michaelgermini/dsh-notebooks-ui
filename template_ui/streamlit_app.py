@@ -43,6 +43,67 @@ def get_default_context_for_template(template_name: str) -> Dict[str, Any]:
             "signature": "Votre Nom",
             "date": today_string,
         },
+        "resume.html.j2": {
+            "name": "Votre Nom",
+            "title": "Titre / Métier",
+            "location": "Ville, Pays",
+            "email": "email@example.com",
+            "phone": "+33 6 00 00 00 00",
+            "summary": "Profil bref et impactant en quelques lignes.",
+            "skills": ["Python", "Pandas", "SQL", "Machine Learning"],
+            "experiences": [
+                {
+                    "role": "Data Scientist",
+                    "company": "Société X",
+                    "start": "2023",
+                    "end": "2025",
+                    "description": "Projets d'analyse de données et MLOps.",
+                    "highlights": ["Modèles de classification", "API de scoring"],
+                }
+            ],
+            "education": [{"degree": "MSc Data", "school": "Université Y", "year": "2022"}],
+        },
+        "invoice.html.j2": {
+            "invoice": {"number": "2025-001", "date": "2025-08-15", "due_date": "2025-09-15"},
+            "client": {"name": "Client SA", "address": "1 rue Exemple, Paris", "email": "contact@client.com", "phone": "+33 1 23 45 67 89"},
+            "items": [
+                {"description": "Prestation A", "quantity": 2, "unit_price": 300.0},
+                {"description": "Prestation B", "quantity": 1, "unit_price": 500.0},
+            ],
+            "totals": {"subtotal": 1100.0, "vat": 220.0, "total": 1320.0},
+        },
+        "meeting_minutes.md.j2": {
+            "title": "Sprint Planning",
+            "date": "2025-08-15",
+            "participants": ["Alice", "Bob", "Chloé"],
+            "facilitator": "Alice",
+            "agenda": ["Revue backlog", "Capacité", "Plan sprint"],
+            "decisions": ["Inclure tickets #12, #15"],
+            "actions": [
+                {"owner": "Bob", "description": "Préparer dataset", "due": "2025-08-20"},
+            ],
+        },
+        "project_proposal.md.j2": {
+            "project_name": "Projet Analytics",
+            "client_name": "Acme Corp",
+            "date": "2025-08-15",
+            "contact_email": "sponsor@acme.com",
+            "background": "Contexte et enjeux du client.",
+            "objectives": ["Améliorer reporting", "Réduire temps d'analyse"],
+            "scope": "Périmètre fonctionnel et technique.",
+            "deliverables": ["Dashboard", "Modèle prédictif"],
+            "timeline": {"start": "2025-09-01", "end": "2025-12-15", "milestones": [{"date": "2025-10-01", "title": "MVP"}]},
+            "budget": "Forfait 40k€ HT.",
+        },
+        "email.md.j2": {
+            "sender_name": "Votre Nom",
+            "sender_email": "vous@example.com",
+            "recipient_name": "Destinataire",
+            "recipient_email": "dest@example.com",
+            "subject": "Sujet du message",
+            "date": "2025-08-15",
+            "body": "Message en quelques paragraphes.",
+        },
     }
 
     return defaults.get(template_name, {"title": "Document", "date": today_string})
@@ -203,7 +264,7 @@ def _ui_notebooks_tab() -> None:
     st.title("Notebooks")
 
     default_dir = _get_default_notebooks_directory()
-    notebooks_dir_str = st.text_input("Dossier notebooks", value=str(default_dir))
+    notebooks_dir_str = str(st.session_state.get("nb_dir", default_dir))
     notebooks_dir = Path(notebooks_dir_str)
 
     if not notebooks_dir.exists():
@@ -215,16 +276,23 @@ def _ui_notebooks_tab() -> None:
         st.warning("Aucun notebook .ipynb trouvé.")
         return
 
-    selected = st.selectbox("Notebook", [str(p.relative_to(notebooks_dir)) for p in notebooks])
-    selected_path = notebooks_dir / selected
+    options = [str(p.relative_to(notebooks_dir)) for p in notebooks]
+    _preselected = st.session_state.get("nb_selected")
+    _index = options.index(_preselected) if (_preselected in options) else 0
+    selected = st.selectbox("Notebook", options, index=_index)
+    selected_path = notebooks_dir / (selected or "")
 
     col1, col2 = st.columns([1, 1])
     with col1:
-        execute_before_render = st.checkbox("Exécuter avant rendu (peut être lent)", value=False)
+        execute_before_render = st.checkbox(
+            "Exécuter avant rendu (peut être lent)",
+            value=st.session_state.get("nb_execute", False),
+        )
     with col2:
         height = st.number_input("Hauteur d'aperçu (px)", min_value=400, max_value=2000, value=900, step=50)
 
-    if st.button("Convertir et afficher"):
+    trigger_sidebar = bool(st.session_state.pop("nb_trigger_display", False))
+    if st.button("Convertir et afficher") or trigger_sidebar:
         cache_key = _compute_notebook_cache_key(selected_path, execute_before_render)
         with st.spinner("Conversion en HTML en cours…"):
             try:
@@ -253,6 +321,25 @@ def main() -> None:
         """,
         unsafe_allow_html=True,
     )
+    with st.sidebar:
+        st.subheader("Notebooks")
+        nb_dir_default = str(_get_default_notebooks_directory())
+        st.text_input("Dossier", value=st.session_state.get("nb_dir", nb_dir_default), key="nb_dir")
+        st.text_input("Rechercher", value=st.session_state.get("nb_query", ""), key="nb_query")
+        # Lister + filtrer
+        options: list[str] = []
+        try:
+            ndir = Path(st.session_state.get("nb_dir", nb_dir_default))
+            if ndir.exists():
+                all_opts = [str(p.relative_to(ndir)) for p in _list_notebooks(ndir)]
+                q = str(st.session_state.get("nb_query", "")).lower()
+                options = [o for o in all_opts if q in o.lower()] if q else all_opts
+        except Exception:
+            options = []
+        st.selectbox("Fichier", options, key="nb_selected")
+        st.checkbox("Exécuter avant rendu", value=st.session_state.get("nb_execute", False), key="nb_execute")
+        if st.button("Afficher dans l'onglet"):
+            st.session_state["nb_trigger_display"] = True
     tab_templates, tab_notebooks = st.tabs(["Templates", "Notebooks"])
     with tab_templates:
         _ui_templates_tab()

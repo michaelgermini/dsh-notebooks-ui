@@ -1,0 +1,75 @@
+<!doctype html>
+<html lang="fr">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>{{ name }} — {{ title }}</title>
+    <style>
+      :root { color-scheme: light dark; }
+      body { font-family: system-ui, -apple-system, Segoe UI, Roboto, Ubuntu, Arial, sans-serif; margin: 2rem auto; max-width: 920px; padding: 0 1rem; line-height: 1.6; }
+      h1, h2, h3 { line-height: 1.25; }
+      header { display: flex; justify-content: space-between; align-items: baseline; border-bottom: 1px solid #ccc; padding-bottom: 0.5rem; margin-bottom: 1.5rem; }
+      .section { margin: 1.2rem 0; }
+      .job { margin: 0.8rem 0; }
+      .meta { color: #666; font-size: 0.95rem; }
+      ul { padding-left: 1.1rem; }
+    </style>
+  </head>
+  <body>
+    <header>
+      <div>
+        <h1>{{ name }}</h1>
+        <div class="meta">{{ title }}</div>
+      </div>
+      <div class="meta">
+        <div>{{ location }}</div>
+        <div>{{ email }}</div>
+        <div>{{ phone }}</div>
+      </div>
+    </header>
+
+    {% if summary %}
+    <section class="section">
+      <h2>Profil</h2>
+      <p>{{ summary }}</p>
+    </section>
+    {% endif %}
+
+    {% if skills %}
+    <section class="section">
+      <h2>Compétences</h2>
+      <ul>
+        {% for skill in skills %}<li>{{ skill }}</li>{% endfor %}
+      </ul>
+    </section>
+    {% endif %}
+
+    {% if experiences %}
+    <section class="section">
+      <h2>Expériences</h2>
+      {% for job in experiences %}
+        <div class="job">
+          <strong>{{ job.role }}</strong> — {{ job.company }} <span class="meta">({{ job.start }} – {{ job.end }})</span>
+          {% if job.description %}<div>{{ job.description }}</div>{% endif %}
+          {% if job.highlights %}
+          <ul>
+            {% for h in job.highlights %}<li>{{ h }}</li>{% endfor %}
+          </ul>
+          {% endif %}
+        </div>
+      {% endfor %}
+    </section>
+    {% endif %}
+
+    {% if education %}
+    <section class="section">
+      <h2>Formation</h2>
+      {% for edu in education %}
+        <div>{{ edu.degree }} — {{ edu.school }} <span class="meta">({{ edu.year }})</span></div>
+      {% endfor %}
+    </section>
+    {% endif %}
+  </body>
+  </html>
+
+

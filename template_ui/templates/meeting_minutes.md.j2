@@ -1,0 +1,20 @@
+# Compte-rendu de réunion — {{ title }}
+
+- **Date**: {{ date }}
+- **Participants**: {{ participants | join(", ") }}
+- **Animateur**: {{ facilitator }}
+
+## Agenda
+{% for a in agenda %}
+- {{ a }}
+{% endfor %}
+
+## Décisions
+{% for d in decisions %}
+- {{ d }}
+{% endfor %}
+
+## Actions
+{% for action in actions %}
+- [ ] {{ action.owner }} — {{ action.description }} (due {{ action.due }})
+{% endfor %}
