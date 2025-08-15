@@ -87,11 +87,7 @@ def convert_ipynb_to_html(nb_path: Path, execute: bool) -> str:
         except Exception:
             # Fallback: render without executing if kernel is unavailable
             pass
-    exporter = HTMLExporter(template_name="classic")
-    exporter.exclude_output_prompt = True
-    exporter.exclude_input_prompt = True
-    body, _ = exporter.from_notebook_node(node)
-    return body
+    return _export_notebook_html(node)
 
 
 def list_ipynb_from_github(owner: str, repo: str, branch: str, directory: str) -> Tuple[bool, List[str]]:
@@ -133,10 +129,7 @@ def fetch_and_convert_from_github(owner: str, repo: str, branch: str, path: str,
                 ep.preprocess(node, {"metadata": {"path": "."}})
             except Exception:
                 pass
-        exporter = HTMLExporter(template_name="classic")
-        exporter.exclude_output_prompt = True
-        exporter.exclude_input_prompt = True
-        body, _ = exporter.from_notebook_node(node)
+        body = _export_notebook_html(node)
         return True, body, path
     except Exception as e:  # noqa: BLE001
         return False, f"Erreur conversion: {e}", path
@@ -160,6 +153,59 @@ def _github_headers(raw: bool = False) -> Dict[str, str]:
         headers["Accept"] = "application/vnd.github+json"
         headers["X-GitHub-Api-Version"] = "2022-11-28"
     return headers
+
+
+def _export_notebook_html(node) -> str:
+    """Export notebook node to HTML with robust fallbacks.
+
+    Tries nbconvert templates in order, then falls back to a minimal renderer.
+    """
+    # Try 'classic'
+    try:
+        exp = HTMLExporter(template_name="classic")
+        exp.exclude_output_prompt = True
+        exp.exclude_input_prompt = True
+        body, _ = exp.from_notebook_node(node)
+        return body
+    except Exception:
+        pass
+
+    # Try 'basic'
+    try:
+        exp = HTMLExporter(template_name="basic")
+        exp.exclude_output_prompt = True
+        exp.exclude_input_prompt = True
+        body, _ = exp.from_notebook_node(node)
+        return body
+    except Exception:
+        pass
+
+    # Minimal fallback
+    try:
+        cells_html = []
+        for cell in node.get("cells", []):
+            ctype = cell.get("cell_type")
+            src = "".join(cell.get("source", []))
+            if ctype == "markdown":
+                cells_html.append(f"<div class=\"md-cell\"><pre>{_html_escape(src)}</pre></div>")
+            elif ctype == "code":
+                cells_html.append(f"<div class=\"code-cell\"><pre><code>{_html_escape(src)}</code></pre></div>")
+            else:
+                cells_html.append(f"<div class=\"raw-cell\"><pre>{_html_escape(src)}</pre></div>")
+        return (
+            "<!doctype html><meta charset='utf-8'><style>body{font-family:system-ui;max-width:960px;margin:2rem auto;padding:0 1rem;line-height:1.6}.code-cell pre{background:#111;color:#eee;padding:0.75rem;border-radius:6px;overflow:auto}</style>"
+            + "".join(cells_html)
+        )
+    except Exception:
+        return "<p>Impossible de convertir le notebook en HTML.</p>"
+
+
+def _html_escape(text: str) -> str:
+    return (
+        text.replace("&", "&amp;")
+        .replace("<", "&lt;")
+        .replace(">", "&gt;")
+    )
 
 
 if __name__ == "__main__":
