@@ -18,6 +18,25 @@ def main() -> None:
 
     execute = st.checkbox("Exécuter avant rendu", value=False)
     height = st.number_input("Hauteur (px)", min_value=400, max_value=2000, value=900, step=50)
+    apply_css = st.checkbox("Appliquer style personnalisé", value=True)
+    default_css = (
+        """
+        :root { color-scheme: light dark; }
+        html { scroll-behavior: smooth; }
+        body { font-family: system-ui, -apple-system, Segoe UI, Roboto, Ubuntu, Arial, sans-serif; max-width: 980px; margin: 2rem auto; padding: 0 1.2rem; line-height: 1.65; }
+        h1, h2, h3, h4 { line-height: 1.25; }
+        img, svg, canvas, video { max-width: 100%; height: auto; }
+        table { width: 100%; border-collapse: collapse; margin: 1rem 0; }
+        th, td { border-bottom: 1px solid #ddd; padding: 0.5rem; text-align: left; }
+        pre, code, kbd { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace; }
+        pre { background: rgba(0,0,0,0.06); padding: 0.75rem; border-radius: 8px; overflow: auto; }
+        .code-cell pre { background: #111; color: #eee; }
+        blockquote { border-left: 4px solid #999; margin: 1rem 0; padding: 0.25rem 0.75rem; color: #666; }
+        hr { border: none; border-top: 1px solid #ccc; margin: 2rem 0; }
+        .md-cell pre { background: transparent; }
+        """
+    )
+    css_text = st.text_area("CSS", value=default_css, height=180) if apply_css else ""
 
     # Unique source avec priorité GitHub, fallback local
     owner = st.text_input("Owner", value="michaelgermini")
@@ -58,13 +77,14 @@ def main() -> None:
             if not ok2:
                 st.error(html_or_msg)
                 return
-            html = html_or_msg
+            html = inject_custom_css(html_or_msg, css_text) if apply_css else html_or_msg
             out_name = Path(filename).stem + ".html"
         else:
             notebooks_dir = app_root() / "notebooks"
             selected_path = notebooks_dir / selected
             with st.spinner("Conversion en HTML…"):
-                html = convert_ipynb_to_html(selected_path, execute)
+                base_html = convert_ipynb_to_html(selected_path, execute)
+                html = inject_custom_css(base_html, css_text) if apply_css else base_html
             out_name = selected_path.stem + ".html"
 
         st.download_button("Télécharger HTML", data=html.encode("utf-8"), file_name=out_name, mime="text/html")
@@ -206,6 +226,31 @@ def _html_escape(text: str) -> str:
         .replace("<", "&lt;")
         .replace(">", "&gt;")
     )
+
+
+def inject_custom_css(html: str, css: str) -> str:
+    """Insert a <style> tag with provided CSS into HTML string.
+
+    If a <head> tag exists, inject inside it; otherwise prepend the style.
+    """
+    if not css.strip():
+        return html
+    style_tag = f"<style>\n{css}\n</style>"
+    lower = html.lower()
+    head_idx = lower.find("<head>")
+    if head_idx != -1:
+        insert_at = head_idx + len("<head>")
+        return html[:insert_at] + style_tag + html[insert_at:]
+    # If there is a <html> but no head, create one after <html>
+    html_idx = lower.find("<html")
+    if html_idx != -1:
+        # Find end of <html ...>
+        end_tag = lower.find(">", html_idx)
+        if end_tag != -1:
+            insert_at = end_tag + 1
+            return html[:insert_at] + "<head>" + style_tag + "</head>" + html[insert_at:]
+    # Fallback: prepend
+    return style_tag + html
 
 
 if __name__ == "__main__":
