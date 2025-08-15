@@ -87,7 +87,7 @@ def convert_ipynb_to_html(nb_path: Path, execute: bool) -> str:
         except Exception:
             # Fallback: render without executing if kernel is unavailable
             pass
-    exporter = HTMLExporter()
+    exporter = HTMLExporter(template_name="classic")
     exporter.exclude_output_prompt = True
     exporter.exclude_input_prompt = True
     body, _ = exporter.from_notebook_node(node)
@@ -133,7 +133,7 @@ def fetch_and_convert_from_github(owner: str, repo: str, branch: str, path: str,
                 ep.preprocess(node, {"metadata": {"path": "."}})
             except Exception:
                 pass
-        exporter = HTMLExporter()
+        exporter = HTMLExporter(template_name="classic")
         exporter.exclude_output_prompt = True
         exporter.exclude_input_prompt = True
         body, _ = exporter.from_notebook_node(node)
